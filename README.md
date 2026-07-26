@@ -98,3 +98,93 @@ Presenter - презентер содержит основную логику п
 `emit<T extends object>(event: string, data?: T): void` - инициализация события. При вызове события в метод передается название события и объект с данными, который будет использован как аргумент для вызова обработчика.  
 `trigger<T extends object>(event: string, context?: Partial<T>): (data: T) => void` - возвращает функцию, при вызове которой инициализируется требуемое в параметрах событие с передачей в него данных из второго параметра.
 
+### Данные
+В ходе анализа предметной области были выделены две основные сущности, используемые в приложении: Товар и Покупатель. Ниже приведены их интерфейсы и назначение.
+
+Товар (IProduct)
+Используется для учёта товаров в системе.
+interface IProduct {
+  id: string; - уникальный идентификатор товара
+  description: string; - описание товара
+  image: string; - ссылка на изображение
+  title: string; - наименование товара
+  category: string; - категория товара
+  price: number | null; - цена товара (может отсутствовать)
+}
+
+Покупатель (ICustomer)
+Используется для сбора и хранения данных, необходимых при оформлении заказа.
+interface ICustomer {
+  payment: TPayment; - способ оплаты
+  email: string | null; - адрес электронной почты
+  phone: string | null; - номер телефона
+  address: string | null; - адрес доставки
+}
+
+### Модели данных
+Класс Catalog
+Отвечает за хранение и управление каталогом товаров.
+Констурктор:
+- constructor(products: IProduct[] = [])
+Инициализирует каталог с переданным массивом товаров. Если массив не передан, создаётся пустой.
+Поля:
+- products: IProduct[] — массив всех доступных товаров.
+- selectedProduct: IProduct | null — выбранный для детального просмотра товар.
+Методы:
+- setProducts(products: IProduct[]): void — заменяет текущий массив товаров.
+- getProducts(): IProduct[] — возвращает массив товаров.
+- getProductById(id: string): IProduct | undefined — ищет товар по идентификатору; возвращает товар или undefined.
+- setSelectedProduct(product: IProduct): void — сохраняет товар для детального просмотра.
+- getSelectedProduct(): IProduct | null — возвращает выбранный товар или null.
+
+Класс Cart
+Управляет корзиной покупок.
+Констурктор:
+- constructor()
+Создаёт пустую корзину.
+Поля:
+- products: IProduct[] — массив товаров, добавленных в корзину.
+Методы:
+- getCartProducts(): IProduct[] | null — возвращает товары в корзине или null.
+- addToCart(product: IProduct): void — добавляет товар в корзину.
+- removeFromCart(product: IProduct): void — удаляет товар из корзины.
+- clearCart(): void — полностью очищает корзину.
+- getTotalPrice(): number — возвращает общую стоимость всех товаров.
+- getTotalCount(): number — возвращает общее количество товаров.
+- hasProduct(id: string): boolean — проверяет наличие товара по идентификатору.
+
+Класс Customer
+Хранит данные покупателя для оформления заказа.
+Конструктор:
+- constructor()
+Инициализирует все поля со значениями по умолчанию.
+Поля:
+- payment: TPayment — выбранный способ оплаты (по умолчанию пустая строка).
+- address: string | null — адрес доставки.
+- email: string | null — электронная почта.
+- phone: string | null — номер телефона.
+
+Методы:
+- setPayment(payment: TPayment): void — устанавливает способ оплаты.
+- setAddress(address: string | null): void — устанавливает адрес.
+- setEmail(email: string | null): void — устанавливает email.
+- setPhone(phone: string | null): void — устанавливает номер телефона.
+- getData(): ICustomer — возвращает все данные покупателя.
+- clear(): void — сбрасывает все поля.
+- validate(): CustomerError — проверяет корректность заполнения полей (не пустые и валидные).
+
+### Слой коммуникации
+Класс AppApi
+Отвечает за взаимодействие с сервером API "веб-ларёк". Использует композицию с базовым классом Api для выполнения HTTP-запросов.
+Конструктор:
+- constructor(baseUrl: string, options?: RequestInit)
+- baseUrl — базовый URL сервера
+- options — дополнительные опции для запросов
+Методы:
+- getProducts(): Promise<IProduct[]>
+Выполняет GET-запрос на эндпоинт /product/
+Возвращает массив товаров с сервера
+- postOrder(orderData: IOrderRequest): Promise<IOrderResponse>
+Выполняет POST-запрос на эндпоинт /order/
+Принимает данные заказа (покупатель + корзина)
+Возвращает ответ с подтверждением покупки
