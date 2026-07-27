@@ -1,4 +1,4 @@
-//Styles
+// Styles
 import "./scss/styles.scss";
 // Base
 import { Api } from "./components/base/Api.ts";
@@ -34,6 +34,11 @@ const customer = new Customer(events);
 // Создаем экземпляр Api и передаем его в AppApi
 const baseApi = new Api(API_URL);
 const api = new AppApi(baseApi);
+
+// Подписка на событие изменения покупателя
+events.on('customer:changed', (data) => {
+    console.log('📢 Данные покупателя обновлены:', data);
+});
 
 console.log('=== НАЧАЛО ТЕСТИРОВАНИЯ ===\n');
 
@@ -97,35 +102,111 @@ function showCatalogAndTest(products: IProduct[]) {
     if (products.length > 0) {
         console.log('\n📥 Добавление товаров в корзину:');
 
+        // Добавляем первый товар (с ценой)
         const testProduct1 = products[0];
-        cart.addToCart(testProduct1);
-        console.log(`  ✅ "${testProduct1.title}" - ${testProduct1.price ?? 'цена не указана'}`);
-
-        if (products.length > 1) {
-            const testProduct2 = products[1];
-            cart.addToCart(testProduct2);
-            console.log(`  ✅ "${testProduct2.title}" - ${testProduct2.price ?? 'цена не указана'}`);
+        if (testProduct1.price !== null) {
+            cart.addToCart(testProduct1);
+            console.log(`  ✅ "${testProduct1.title}" - ${testProduct1.price} ₽`);
+        } else {
+            console.log(`  ⚠️ "${testProduct1.title}" - не добавлен (цена не указана)`);
         }
 
+        // Добавляем второй товар (с ценой)
+        if (products.length > 1) {
+            const testProduct2 = products[1];
+            if (testProduct2.price !== null) {
+                cart.addToCart(testProduct2);
+                console.log(`  ✅ "${testProduct2.title}" - ${testProduct2.price} ₽`);
+            } else {
+                console.log(`  ⚠️ "${testProduct2.title}" - не добавлен (цена не указана)`);
+            }
+        }
+
+        // Добавляем третий товар (может быть без цены - Мамка-таймер)
         if (products.length > 2) {
             const testProduct3 = products[2];
-            cart.addToCart(testProduct3);
-            console.log(`  ✅ "${testProduct3.title}" - ${testProduct3.price ?? 'цена не указана'}`);
+            if (testProduct3.price !== null) {
+                cart.addToCart(testProduct3);
+                console.log(`  ✅ "${testProduct3.title}" - ${testProduct3.price} ₽`);
+            } else {
+                console.log(`  ⚠️ "${testProduct3.title}" - не добавлен (цена не указана)`);
+            }
         }
 
         console.log(`\n📊 В корзине ${cart.getTotalCount()} товаров`);
         console.log(`💰 Общая сумма: ${cart.getTotalPrice()} ₽`);
 
         const cartItems = cart.getCartProducts();
-        if (cartItems) {
-            console.log('\n📋 Содержимое корзины:');
+        console.log('\n📋 Содержимое корзины:');
+        if (cartItems.length > 0) {
             cartItems.forEach((item, index) => {
-                console.log(`  ${index + 1}. ${item.title} (${item.price ?? 'цена не указана'})`);
+                console.log(`  ${index + 1}. ${item.title} (${item.price} ₽)`);
+            });
+        } else {
+            console.log('  Корзина пуста');
+        }
+
+        // ============================================
+        // 3. ТЕСТИРОВАНИЕ ВАЛИДАЦИИ ПОКУПАТЕЛЯ
+        // ============================================
+        console.log('\n' + '='.repeat(50));
+        console.log('🔍 ТЕСТИРОВАНИЕ ВАЛИДАЦИИ ПОКУПАТЕЛЯ');
+        console.log('='.repeat(50));
+
+        // 3.1 Тест с пустыми полями
+        console.log('\n📝 Тест 1: Валидация с пустыми полями');
+        console.log('  Ожидаемый результат: ошибки для всех полей');
+        
+        customer.clear();
+        const emptyErrors = customer.validate();
+        console.log('  Результат валидации пустых полей:');
+        if (Object.keys(emptyErrors).length > 0) {
+            console.log('  ❌ Найдены ошибки:');
+            Object.entries(emptyErrors).forEach(([field, message]) => {
+                console.log(`    - ${field}: ${message}`);
+            });
+        } else {
+            console.log('  ✅ Данные валидны (неожиданно)');
+        }
+
+        // 3.2 Тест с частично заполненными полями
+        console.log('\n📝 Тест 2: Валидация с частично заполненными полями');
+        console.log('  Ожидаемый результат: ошибка для телефона');
+        
+        customer.setPayment('card');
+        customer.setEmail('test@example.com');
+        customer.setAddress('г. Москва, ул. Тверская, д. 1');
+        // Телефон оставляем пустым
+        
+        const partialErrors = customer.validate();
+        console.log('  Результат валидации (без телефона):');
+        if (Object.keys(partialErrors).length > 0) {
+            console.log('  ❌ Найдены ошибки:');
+            Object.entries(partialErrors).forEach(([field, message]) => {
+                console.log(`    - ${field}: ${message}`);
+            });
+        } else {
+            console.log('  ✅ Данные валидны (неожиданно)');
+        }
+
+        // 3.3 Тест с полностью заполненными полями
+        console.log('\n📝 Тест 3: Валидация с полностью заполненными полями');
+        console.log('  Ожидаемый результат: все поля валидны');
+        
+        customer.setPhone('+79991234567');
+        const fullErrors = customer.validate();
+        console.log('  Результат валидации (все поля заполнены):');
+        if (Object.keys(fullErrors).length === 0) {
+            console.log('  ✅ Все поля валидны');
+        } else {
+            console.log('  ❌ Найдены ошибки:');
+            Object.entries(fullErrors).forEach(([field, message]) => {
+                console.log(`    - ${field}: ${message}`);
             });
         }
 
         // ============================================
-        // 3. ТЕСТИРОВАНИЕ ОТПРАВКИ ЗАКАЗА
+        // 4. ТЕСТИРОВАНИЕ ОТПРАВКИ ЗАКАЗА
         // ============================================
         console.log('\n' + '='.repeat(50));
         console.log('📦 ТЕСТИРОВАНИЕ ОФОРМЛЕНИЯ ЗАКАЗА');
@@ -143,55 +224,45 @@ function showCatalogAndTest(products: IProduct[]) {
         console.log('  Телефон:', customerData.phone);
         console.log('  Адрес:', customerData.address);
 
-        console.log('\n🔍 Проверка валидации:');
-        const errors = customer.validate();
-        const isValid = Object.keys(errors).length === 0;
-        console.log(`  Статус: ${isValid ? '✅ Валидно' : '❌ Есть ошибки'}`);
-
-        if (!isValid) {
-            console.log('  Ошибки:', errors);
+        // Финальная проверка валидации перед отправкой заказа
+        console.log('\n🔍 Финальная проверка валидации:');
+        const finalErrors = customer.validate();
+        if (Object.keys(finalErrors).length === 0) {
+            console.log('  ✅ Данные валидны');
+        } else {
+            console.log('  ❌ Ошибки валидации:', finalErrors);
             return;
         }
 
         // ============================================
-        // 4. ФОРМИРОВАНИЕ ЗАКАЗА С УЧЕТОМ ТОВАРОВ БЕЗ ЦЕНЫ
+        // 5. ФОРМИРОВАНИЕ ЗАКАЗА
         // ============================================
 
-        // Получаем доступные и недоступные товары из корзины
-        const availableProducts = cart.getAvailableProducts();
-        const unavailableProducts = cart.getUnavailableProducts();
+        // Получаем все товары из корзины
+        const cartProducts = cart.getCartProducts();
 
-        // Проверяем, есть ли товары без цены
-        if (unavailableProducts.length > 0) {
-            console.log('\n⚠️ ВНИМАНИЕ: Товары без цены будут исключены из заказа:');
-            unavailableProducts.forEach(p => {
-                console.log(`  - "${p.title}" (ID: ${p.id})`);
-            });
-            console.log(`  Они не будут включены в заказ и не будут оплачены.\n`);
-        }
-
-        // Проверяем, есть ли доступные товары для заказа
-        if (availableProducts.length === 0) {
+        // Проверяем, есть ли товары для заказа
+        if (cartProducts.length === 0) {
             console.error('❌ Нет товаров для заказа');
-            console.log('  💡 Все товары в корзине имеют цену null и не могут быть куплены');
+            console.log('  💡 Корзина пуста');
             return;
         }
 
-        console.log(`✅ Товаров для заказа: ${availableProducts.length}`);
+        console.log(`\n✅ Товаров для заказа: ${cartProducts.length}`);
 
-        // Формируем данные для заказа ТОЛЬКО с доступными товарами
+        // Формируем данные для заказа
         const orderData: IOrderRequest = {
             payment: customerData.payment as 'cash' | 'card' | '',
-            email: customerData.email!,
-            phone: customerData.phone!,
-            address: customerData.address!,
-            total: availableProducts.reduce((sum, p) => sum + (p.price || 0), 0),
-            items: availableProducts.map(p => p.id)
+            email: customerData.email,
+            phone: customerData.phone,
+            address: customerData.address,
+            total: cart.getTotalPrice(),
+            items: cartProducts.map(p => p.id)
         };
 
         console.log('\n📤 Отправка заказа на сервер:');
         console.log('  Товары в заказе:');
-        availableProducts.forEach((p, i) => {
+        cartProducts.forEach((p, i) => {
             console.log(`    ${i + 1}. ${p.title} - ${p.price} ₽`);
         });
         console.log(`  Общая сумма: ${orderData.total} ₽`);
