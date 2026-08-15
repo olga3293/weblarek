@@ -1,6 +1,5 @@
 import { IProduct } from '../../types/index.ts';
 import { IEvents } from '../base/Events.ts';
-
 export class Cart {
     private products: IProduct[];
     private events: IEvents;
@@ -39,7 +38,7 @@ export class Cart {
     }
 
     removeFromCart(product: IProduct): void {
-        const index = this.products.indexOf(product);
+        const index = this.products.findIndex((item) => item.id === product.id);
         if (index !== -1) {
             this.products.splice(index, 1);
             this.events.emit('cart:changed', {

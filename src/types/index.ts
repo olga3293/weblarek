@@ -45,3 +45,61 @@ export interface IAppApi {
     getProducts(): Promise<IProduct[]>;
     postOrder(orderData: IOrderRequest): Promise<IOrderResponse>;
 }
+export interface IGallery {
+    catalog: HTMLElement[];
+}
+export interface ICard {
+    title: string;
+    price: number | null;
+}
+export interface ICardWithImage extends ICard {
+    image: string;
+    category: string;
+}
+export interface ICardDetail extends ICardWithImage {
+    description: string;
+    buttonDisabled: boolean;
+}
+export interface ICardBasket extends ICard {
+    itemIndex: number;
+}
+export interface IHeader {
+    counter: number;
+}
+export interface IBasket {
+    basketList: HTMLElement[];
+    basketPrice: string;
+    buttonDisabled: boolean;
+}
+export interface IModalContainer {
+    content: HTMLElement;
+}
+export interface IOrderSuccess {
+    successDescription: string;
+}
+export interface IForm {
+    textError: string;
+}
+export interface IFormOrder extends IForm {
+    payment: string | null;
+    address: string | null;
+}
+export interface IFormContacts extends IForm {
+    email: string | null;
+    phone: string | null;
+}
+export interface ICardActions {
+    onClick: (event: MouseEvent) => void;
+}
+export interface IOrderActions {
+    onChooseCard?: () => void;
+    onChooseCash?: () => void;
+    onAddressInput?: (value: string) => void;
+    onClickFurther?: () => void;
+    onEmailInput?: (value: string) => void;
+    onPhoneInput?: (value: string) => void;
+    onClickPay?: () => void;
+}
+export interface ICloseAction {
+    onClose?: () => void;
+}

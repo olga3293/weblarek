@@ -1,6 +1,5 @@
 import { ICustomer, TPayment, CustomerError } from '../../types/index.ts';
 import { IEvents } from '../base/Events.ts';
-
 export class Customer {
     private payment: TPayment | '';
     private address: string;
