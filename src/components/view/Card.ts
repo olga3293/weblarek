@@ -1,6 +1,5 @@
 import { Component } from '../base/Component';
-import { IEvents } from '../base/Events';
-import { IProduct, ICard, ICardWithImage, ICardBasket, ICardDetail } from '../../types';
+import { ICard, ICardWithImage, ICardBasket, ICardDetail } from '../../types';
 import { categoryMap } from '../../utils/constants';
 
 export abstract class Card<T extends ICard> extends Component<T> {
@@ -57,13 +56,10 @@ export abstract class CardWithImage<T extends ICardWithImage> extends Card<T> {
 export class CardCatalog extends CardWithImage<ICardWithImage> {
     constructor(
         container: HTMLElement,
-        protected events: IEvents,
-        protected product: IProduct
+        action: (event: MouseEvent) => void
     ) {
         super(container);
-        container.addEventListener('click', () => {
-            this.events.emit('card-catalog:click', this.product);
-        });
+        container.addEventListener('click', action);
     }
 }
 
@@ -71,15 +67,16 @@ export class CardDetail extends CardWithImage<ICardDetail> {
     protected descriptionElement: HTMLElement | null;
     protected addButton: HTMLButtonElement | null;
 
-    constructor(container: HTMLElement, protected events: IEvents) {
+    constructor(
+        container: HTMLElement,
+        action: (event: MouseEvent) => void
+    ) {
         super(container);
         this.descriptionElement = container.querySelector('.card__text');
         this.addButton = container.querySelector('.card__button');
 
         if (this.addButton) {
-            this.addButton.addEventListener('click', () => {
-                this.events.emit('card-detail:click');
-            });
+            this.addButton.addEventListener('click', action);
         }
     }
 
@@ -108,17 +105,14 @@ export class CardBasket extends Card<ICardBasket> {
 
     constructor(
         container: HTMLElement,
-        protected events: IEvents,
-        protected product: IProduct
+        action: (event: MouseEvent) => void
     ) {
         super(container);
         this.itemIndexElement = container.querySelector('.basket__item-index');
         this.deleteButton = container.querySelector('.basket__item-delete') || container.querySelector('.card__button');
 
         if (this.deleteButton) {
-            this.deleteButton.addEventListener('click', () => {
-                this.events.emit('card-basket:click', this.product);
-            });
+            this.deleteButton.addEventListener('click', action);
         }
     }
 

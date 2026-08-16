@@ -1,6 +1,6 @@
-import { Form } from './Form.ts';
-import { IFormOrder } from '../../types/index.ts';
-import { IEvents } from '../base/Events.ts';
+import { Form } from './Form';
+import { IFormOrder } from '../../types/index';
+import { IEvents } from '../base/Events';
 
 export class FormOrder extends Form<IFormOrder> {
     protected addressInput: HTMLInputElement | null;
@@ -14,33 +14,30 @@ export class FormOrder extends Form<IFormOrder> {
         this.cashButton = container.querySelector('button[name="cash"]');
 
         if (this.addressInput) {
-            this.addressInput.addEventListener('input', (event) => {
+            this.addressInput.addEventListener('change', (event) => {
                 const target = event.target as HTMLInputElement;
                 this.events.emit('customer-address:input', { address: target.value });
-                this.validateForm();
             });
         }
 
         if (this.cardButton) {
             this.cardButton.addEventListener('click', () => {
                 this.events.emit('payment:card');
-                this.validateForm();
             });
         }
 
         if (this.cashButton) {
             this.cashButton.addEventListener('click', () => {
                 this.events.emit('payment:cash');
-                this.validateForm();
             });
         }
 
-        if (this.submitButton) {
-            this.submitButton.addEventListener('click', (event) => {
-                event.preventDefault();
-                this.events.emit('form-order-button:click');
-            });
-        }
+       
+        this.form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            this.events.emit('form-order-button:click');
+        })
+        
     }
 
     set payment(value: string | null) {
@@ -54,22 +51,11 @@ export class FormOrder extends Form<IFormOrder> {
                 this.cashButton.classList.add('button_alt-active');
             }
         }
-        this.validateForm();
     }
 
     set address(value: string | null) {
         if (this.addressInput) {
             this.addressInput.value = value || '';
-        }
-        this.validateForm();
-    }
-
-    private validateForm(): void {
-        if (this.submitButton) {
-            const hasPayment = this.cardButton?.classList.contains('button_alt-active') ||
-                this.cashButton?.classList.contains('button_alt-active');
-            const hasAddress = this.addressInput && this.addressInput.value.trim() !== '';
-            this.submitButton.disabled = !(hasPayment && hasAddress);
         }
     }
 }

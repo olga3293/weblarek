@@ -19,11 +19,13 @@ export class Basket extends Component<IBasket> {
             });
         }
     }
-
+    
     set basketList(items: HTMLElement[]) {
         if (this.basketListElement) {
             this.basketListElement.replaceChildren(...items);
         }
+
+        this.buttonDisabled = items.length === 0;
     }
 
     set basketPrice(value: string) {
@@ -31,7 +33,6 @@ export class Basket extends Component<IBasket> {
             this.basketPriceElement.textContent = value;
         }
     }
-
     set buttonDisabled(value: boolean) {
         if (this.basketButton) {
             this.basketButton.disabled = value;

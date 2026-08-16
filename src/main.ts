@@ -33,10 +33,12 @@ const orderSuccess = new OrderSuccess(cloneTemplate('#success'), events);
 const formOrder = new FormOrder(cloneTemplate('#order'), events);
 const formContacts = new FormContacts(cloneTemplate('#contacts'), events);
 
-const DEFAULT_IMAGE = './src/images/Subtract.svg';
+const cardPreview = new CardDetail(
+    cloneTemplate('#card-preview'),
+    () => events.emit('card-detail:click')
+);
 
-type ModalView = 'preview' | 'basket' | 'order' | 'contacts' | 'success' | null;
-let currentModalView: ModalView = null;
+const DEFAULT_IMAGE = './src/images/Subtract.svg';
 
 function getProductImage(product: IProduct): string {
     return product.image || DEFAULT_IMAGE;
@@ -44,7 +46,10 @@ function getProductImage(product: IProduct): string {
 
 function renderGallery(): void {
     const itemCards = catalogModel.getProducts().map((product) => {
-        const card = new CardCatalog(cloneTemplate('#card-catalog'), events, product);
+        const card = new CardCatalog(
+            cloneTemplate('#card-catalog'),
+            () => events.emit('card-catalog:click', { id: product.id })
+        );
         card.title = product.title;
         card.price = product.price;
         card.category = product.category;
@@ -58,35 +63,35 @@ function renderProductPreview(): void {
     const product = catalogModel.getSelectedProduct();
     if (!product) return;
 
-    const card = new CardDetail(cloneTemplate('#card-preview'), events);
     const inCart = cartModel.hasProduct(product.id);
 
-    card.title = product.title;
-    card.price = product.price;
-    card.category = product.category;
-    card.image = getProductImage(product);
-    card.description = product.description || '';
+    cardPreview.title = product.title;
+    cardPreview.price = product.price;
+    cardPreview.category = product.category;
+    cardPreview.image = getProductImage(product);
+    cardPreview.description = product.description || '';
 
     if (product.price === null) {
-        card.buttonText = 'Недоступно';
-        card.buttonDisabled = true;
+        cardPreview.buttonText = 'Недоступно';
+        cardPreview.buttonDisabled = true;
     } else if (inCart) {
-        card.buttonText = 'Удалить из корзины';
-        card.buttonDisabled = false;
+        cardPreview.buttonText = 'Удалить из корзины';
+        cardPreview.buttonDisabled = false;
     } else {
-        card.buttonText = 'Купить';
-        card.buttonDisabled = false;
+        cardPreview.buttonText = 'Купить';
+        cardPreview.buttonDisabled = false;
     }
 
-    modal.content = card.render();
-    modal.open();
-    currentModalView = 'preview';
+    cardPreview.render(product);    
 }
 
 function renderBasket(): void {
     const products = cartModel.getCartProducts();
     const basketList = products.map((product, index) => {
-        const card = new CardBasket(cloneTemplate('#card-basket'), events, product);
+        const card = new CardBasket(
+            cloneTemplate('#card-basket'),
+            () => events.emit('card-basket:click', { id: product.id })
+        );
         card.title = product.title;
         card.price = product.price;
         card.itemIndex = index + 1;
@@ -95,26 +100,29 @@ function renderBasket(): void {
 
     basket.basketList = basketList;
     basket.basketPrice = `${cartModel.getTotalPrice()} синапсов`;
-    basket.buttonDisabled = products.length === 0;
+    modal.content = basket.render();
 }
 
 function renderFormOrder(): void {
     const data = customerModel.getData();
     const errors = customerModel.validate();
+    
     formOrder.payment = data.payment;
     formOrder.address = data.address;
+    formOrder.valid = !errors.payment && !errors.address;
     formOrder.textError = errors.payment || errors.address || '';
 }
 
 function renderFormContacts(): void {
     const data = customerModel.getData();
     const errors = customerModel.validate();
+    
     formContacts.email = data.email;
     formContacts.phone = data.phone;
+    formContacts.valid = !errors.email && !errors.phone;
     formContacts.textError = errors.email || errors.phone || '';
 }
 
-// События моделей
 events.on('catalog:changed', () => {
     renderGallery();
 });
@@ -124,16 +132,9 @@ events.on('card:selected', () => {
 });
 
 events.on('cart:changed', () => {
+    renderBasket();
+    renderProductPreview();
     header.counter = cartModel.getTotalCount();
-
-    if (currentModalView === 'preview') {
-        renderProductPreview();
-    }
-
-    if (currentModalView === 'basket') {
-        renderBasket();
-        modal.content = basket.render();
-    }
 });
 
 events.on('customer:changed', () => {
@@ -141,39 +142,45 @@ events.on('customer:changed', () => {
     renderFormContacts();
 });
 
-// События представлений
-events.on('card-catalog:click', (product: IProduct) => {
-    catalogModel.setSelectedProduct(product);
+events.on('card-catalog:click', ({ id }: { id: string }) => {
+    const product = catalogModel.getProductById(id);
+    if (product) {
+        catalogModel.setSelectedProduct(product);
+    }
+    modal.content = cardPreview.render();
+    modal.open();
 });
 
-events.on('card-detail:click', () => {
-    const product = catalogModel.getSelectedProduct();
-    if (!product) return;
-
-    if (cartModel.hasProduct(product.id)) {
-        currentModalView = null;
-        cartModel.removeFromCart(product);
-        modal.close();
+events.on("card-detail:click", () => {
+  const product = catalogModel.getSelectedProduct();
+  if (product) {
+    const inCart = cartModel.hasProduct(product.id);
+    if (inCart) {
+      cartModel.removeFromCart(product);
+      modal.close();
     } else {
-        cartModel.addToCart(product);
+      cartModel.addToCart(product);
     }
+    renderProductPreview();
+    modal.content = cardPreview.render();
+  }
 });
 
 events.on('header-basket:click', () => {
     renderBasket();
-    modal.content = basket.render();
     modal.open();
-    currentModalView = 'basket';
 });
 
-events.on('card-basket:click', (product: IProduct) => {
-    cartModel.removeFromCart(product);
+events.on('card-basket:click', ({ id }: { id: string }) => {
+    const product = catalogModel.getProductById(id);
+    if (product) {
+        cartModel.removeFromCart(product);
+    }
 });
 
 events.on('basket-button:click', () => {
     renderFormOrder();
     modal.content = formOrder.render();
-    currentModalView = 'order';
 });
 
 events.on('payment:card', () => {
@@ -189,9 +196,14 @@ events.on('customer-address:input', ({ address }: { address: string }) => {
 });
 
 events.on('form-order-button:click', () => {
-    renderFormContacts();
-    modal.content = formContacts.render();
-    currentModalView = 'contacts';
+    const errors = customerModel.validate();
+    if (!errors.payment && !errors.address) {
+        renderFormContacts();
+        modal.content = formContacts.render();
+    } else {
+        renderFormOrder();
+        modal.content = formOrder.render();
+    }
 });
 
 events.on('contact:email', ({ email }: { email: string }) => {
@@ -206,22 +218,31 @@ events.on('order:pay', async () => {
     const data = customerModel.getData();
     const cartProducts = cartModel.getCartProducts();
 
+    const errors = customerModel.validate();
+    if (errors.email || errors.phone) {
+        renderFormContacts();
+        modal.content = formContacts.render();
+        return;
+    }
+
     const orderData: IOrderRequest = {
-        email: data.email,
-        address: data.address,
-        phone: data.phone,
         payment: data.payment,
+        address: data.address,
+        email: data.email,
+        phone: data.phone,
         total: cartModel.getTotalPrice(),
         items: cartProducts.map((item) => item.id),
     };
 
     try {
         const result = await api.postOrder(orderData);
-        orderSuccess.successDescription = `Списано ${result.total} синапсов`;
-        modal.content = orderSuccess.render();
-        currentModalView = 'success';
+        if (result.total) {
+            orderSuccess.successDescription = `Списано ${result.total} синапсов`;
+        }
         cartModel.clearCart();
         customerModel.clear();
+        modal.content = orderSuccess.render();
+        modal.open();
     } catch (error) {
         console.error('Ошибка оформления заказа:', error);
     }
@@ -229,7 +250,6 @@ events.on('order:pay', async () => {
 
 events.on('modal:close', () => {
     modal.close();
-    currentModalView = null;
 });
 
 (async () => {
