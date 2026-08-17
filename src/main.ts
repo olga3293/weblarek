@@ -129,11 +129,12 @@ events.on('catalog:changed', () => {
 
 events.on('card:selected', () => {
     renderProductPreview();
+    modal.content = cardPreview.render();
+    modal.open();
 });
 
 events.on('cart:changed', () => {
     renderBasket();
-    renderProductPreview();
     header.counter = cartModel.getTotalCount();
 });
 
@@ -147,8 +148,6 @@ events.on('card-catalog:click', ({ id }: { id: string }) => {
     if (product) {
         catalogModel.setSelectedProduct(product);
     }
-    modal.content = cardPreview.render();
-    modal.open();
 });
 
 events.on("card-detail:click", () => {
@@ -157,12 +156,10 @@ events.on("card-detail:click", () => {
     const inCart = cartModel.hasProduct(product.id);
     if (inCart) {
       cartModel.removeFromCart(product);
-      modal.close();
     } else {
       cartModel.addToCart(product);
     }
-    renderProductPreview();
-    modal.content = cardPreview.render();
+    modal.close();
   }
 });
 
@@ -196,14 +193,8 @@ events.on('customer-address:input', ({ address }: { address: string }) => {
 });
 
 events.on('form-order-button:click', () => {
-    const errors = customerModel.validate();
-    if (!errors.payment && !errors.address) {
-        renderFormContacts();
-        modal.content = formContacts.render();
-    } else {
-        renderFormOrder();
-        modal.content = formOrder.render();
-    }
+    renderFormContacts();
+    modal.content = formContacts.render();
 });
 
 events.on('contact:email', ({ email }: { email: string }) => {
@@ -217,13 +208,6 @@ events.on('contact:phone', ({ phone }: { phone: string }) => {
 events.on('order:pay', async () => {
     const data = customerModel.getData();
     const cartProducts = cartModel.getCartProducts();
-
-    const errors = customerModel.validate();
-    if (errors.email || errors.phone) {
-        renderFormContacts();
-        modal.content = formContacts.render();
-        return;
-    }
 
     const orderData: IOrderRequest = {
         payment: data.payment,
